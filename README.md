@@ -1,1 +1,1 @@
-![CI](https://github.com/<kullanici>/<repo>/actions/workflows/ci.yml/badge.svg)
+[![CI](https://github.com/nini-n/safirl-codev-tr/actions/workflows/ci.yml/badge.svg)](https://github.com/nini-n/safirl-codev-tr/actions/workflows/ci.yml)
