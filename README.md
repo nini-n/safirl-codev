@@ -159,29 +159,44 @@ docker run --rm -it -v %CD%\runs:/app/runs safirl
 
 ```
 .
-├─ assets/                 # MuJoCo XML ve varlıklar
+├─ assets/
 │  └─ franka/franka.xml
 ├─ envs/
+│  ├─ __init__.py
 │  ├─ franka_kinematic_env.py
 │  └─ franka_mujoco_env.py
 ├─ rl/
-│  └─ ppo.py               # Minimal PPO (mu, evaluate, update)
+│  ├─ __init__.py
+│  └─ ppo.py
 ├─ shield/
+│  ├─ __init__.py
 │  ├─ cbf_qp.py
 │  └─ mpc_shield.py
 ├─ specs/
-│  └─ specs.py             # STL robustness & violation helpers
+│  ├─ __init__.py
+│  └─ specs.py
 ├─ verify/
-│  └─ robustness.py        # EpisodeTracer (add/summary/clear)
+│  ├─ __init__.py
+│  └─ robustness.py
 ├─ scripts/
-│  ├─ train.py / evaluate.py / benchmark.py
-│  ├─ plot_metrics.py / plot_benchmark.py / make_report_assets.py
-│  ├─ reproduce_all.py / apply_best_safety.py / codesign.py
-│  └─ print_summary.py
-├─ tests/                  # 4 birim testi
+│  ├─ train.py
+│  ├─ evaluate.py
+│  ├─ benchmark.py
+│  ├─ plot_metrics.py
+│  ├─ plot_benchmark.py
+│  ├─ make_report_assets.py
+│  ├─ apply_best_safety.py
+│  └─ codesign.py
+├─ tests/
+│  ├─ test_kinematics.py
+│  ├─ test_specs.py
+│  └─ test_shields.py
+├─ runs/                  (çıktı; git’e dahil ETME)
 ├─ requirements.txt
 ├─ Dockerfile
-└─ README.md
+├─ README.md
+└─ .github/workflows/ci.yml
+
 ```
 
 ---
@@ -220,3 +235,4 @@ Bu repoda minimal arayüz kullanılıyor: `mu(obs)` deterministik ortalama eylem
 
 **Torchaudio/Torchvision uyumsuzluk uyarıları**
 Bu paketler zorunlu değil; `torch==2.2.2` ile proje test edilmiştir. Uyarılar göz ardı edilebilir.
+
