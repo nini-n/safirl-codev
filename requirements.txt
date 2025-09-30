@@ -1,0 +1,8 @@
+numpy==1.26.4
+torch==2.2.2
+gymnasium==0.29.1
+mujoco==3.3.6
+osqp==0.6.5
+scipy==1.11.4
+matplotlib==3.8.4
+PyYAML==6.0.1

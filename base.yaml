@@ -1,0 +1,28 @@
+env: franka_mujoco
+algo: PPO
+total_steps: 200000
+horizon: 256
+learning_rate: 0.0003
+gamma: 0.99
+gae_lambda: 0.95
+clip_ratio: 0.2
+update_epochs: 4
+minibatch_size: 1024
+hidden_sizes:
+- 128
+- 128
+seed: 3
+safety:
+  d_min: 0.08
+  qdot_max: 0.8
+  cbf_alpha: 2.0
+  shield: mpc
+  mpc_horizon: 8
+  mpc_rho: 0.05
+  safety:
+    cbf_alpha: 2.5311633509539773
+    d_min: 0.08
+    mpc_horizon: 7
+    mpc_rho: 0.035843535938270714
+    qdot_max: 0.8
+    shield: mpc
