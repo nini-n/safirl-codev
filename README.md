@@ -12,7 +12,7 @@
 
 ---
 
-**🇹🇷 Turkish guide:** see [README_TR.md](README_TR.md).
+> English | [Türkçe](README_TR.md)
 
 ---
 
@@ -248,3 +248,4 @@ Verify `assets/franka/franka.xml`. On Windows/OneDrive paths the code includes a
 
 **Torchaudio/Torchvision warnings**  
 They are not required. The repo is tested with `torch==2.2.2`.
+
