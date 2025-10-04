@@ -1,0 +1,36 @@
+# experiments/base.yaml
+
+# ---- Ortam ----
+env: franka_mujoco            # veya: franka_kinematic
+xml: assets/franka/franka.xml # franka_mujoco için XML yolu
+horizon: 256
+seed: 0
+
+# ---- Güvenlik ----
+safety:
+  d_min: 0.08
+  qdot_max: 1.2
+
+# ---- PPO (scriptler üst seviyeden okuyor) ----
+hidden_sizes: [64, 64]
+learning_rate: 3.0e-4
+clip_ratio: 0.2
+update_epochs: 10
+minibatch_size: 64
+gamma: 0.99
+lam: 0.95
+train_batch_size: 4096
+
+# ---- Kalkanlar ----
+shield:
+  enable_cbf: true
+  enable_mpc: true
+  intervention_threshold: 0.0
+  mpc_horizon: 10
+
+# ---- Değerlendirme / Benchmark ----
+eval:
+  episodes: 5
+
+benchmark:
+  episodes: 8
