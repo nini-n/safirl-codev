@@ -6,6 +6,7 @@ Planar **Franka** benzeri 3-DoF kol için **güvenli pekiştirmeli öğrenme** i
 > ✅ **Testler:** `pytest` ile 4 test geçiyor
 > ✅ **Docker:** Başsız (headless) kullanım için hazır imaj
 
+> [English](README.md) | Türkçe
 ---
 
 ## İçindekiler
@@ -235,4 +236,5 @@ Bu repoda minimal arayüz kullanılıyor: `mu(obs)` deterministik ortalama eylem
 
 **Torchaudio/Torchvision uyumsuzluk uyarıları**
 Bu paketler zorunlu değil; `torch==2.2.2` ile proje test edilmiştir. Uyarılar göz ardı edilebilir.
+
 
