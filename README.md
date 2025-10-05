@@ -2,6 +2,8 @@
 
 > Reproducible training/evaluation for a PPO agent with **Control-Barrier-Function (CBF)** and **MPC-style** shields. Includes STL-like robustness tracing, benchmarks, plotting utilities, and a one-shot reproduction script.
 
+![CI](https://github.com/nini-n/safirl-codev/actions/workflows/ci.yml/badge.svg)
+
 [English](README.md) · [Türkçe](README_TR.md)
 
 ---
@@ -119,3 +121,4 @@ If you use this repository in academic work, please cite:
 ## License
 
 MIT License. See [LICENSE](LICENSE).
+
