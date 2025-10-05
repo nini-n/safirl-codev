@@ -1,3 +1,5 @@
+# scripts/codesign.py
+
 # --- path fix ---
 import os
 import sys
@@ -20,7 +22,7 @@ from shield.mpc_shield import MPCShield
 from verify.robustness import EpisodeTracer
 
 
-# ----------------- yardımcılar -----------------
+# ----------------- helpers -----------------
 def make_env(cfg):
     return FrankaKinematicEnv(
         d_min=float(cfg["safety"]["d_min"]), qdot_max=float(cfg["safety"]["qdot_max"])
@@ -61,7 +63,7 @@ def make_shield_from_candidate(safety_base, candidate):
 
 
 def eval_candidate(cfg, agent, env, candidate, episodes=5):
-    """Aday parametre setini sabit politika ile değerlendir."""
+    """Evaluate a candidate parameter set with a fixed policy."""
     shield = make_shield_from_candidate(cfg["safety"], candidate)
     returns = []
     vio_count = 0
@@ -111,9 +113,9 @@ def eval_candidate(cfg, agent, env, candidate, episodes=5):
 
 def score(metrics, w):
     """
-    Çok ölçütlü skor (büyüğü iyi).
-    Öncelik: ihlal=0. İhlal varsa ağır ceza.
-    Sonra return yüksek, müdahale oranı düşük, robustness yüksek.
+    Multi-criteria score (higher is better).
+    Priority: violations == 0. Apply a heavy penalty if any violation occurs.
+    Then prefer higher return, lower intervention rate, and higher robustness.
     """
     if metrics["violations"] > 0:
         return -1e6 * metrics["violations"] - 1e3 * metrics["int_rate"]
@@ -126,7 +128,7 @@ def score(metrics, w):
     )
 
 
-# --------------- ana arama döngüsü ---------------
+# --------------- main search loop ---------------
 def random_search(
     cfg, policy_path, trials=60, episodes=5, shield="mpc", seed=0, weights=None
 ):
@@ -167,7 +169,7 @@ def random_search(
 
     for t in range(1, trials + 1):
         cand = {"shield": shield}
-        # Örnekleme aralıkları (mantıklı sınırlar)
+        # Sampling ranges (sensible bounds)
         cand["cbf_alpha"] = float(rng.uniform(0.5, 4.0))
         if shield == "mpc":
             cand["mpc_horizon"] = int(rng.integers(6, 16))  # 6..15
@@ -201,14 +203,14 @@ def random_search(
             best_row = (cand, metrics, s)
         print(f"[{t:02d}/{trials}] cand={cand}  metrics={metrics}  score={s:.3f}")
 
-    # En iyi sonucu kaydet
+    # Save the best result
     best_cand, best_metrics, best_score = best_row
     print("\n=== BEST CANDIDATE ===")
     print(best_cand)
     print(best_metrics)
     print(f"score={best_score:.3f}")
 
-    # YAML çıktı
+    # YAML output
     out_yaml = {
         "safety": {
             "d_min": float(cfg["safety"]["d_min"]),
