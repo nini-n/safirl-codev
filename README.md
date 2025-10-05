@@ -1,9 +1,12 @@
 # SAFIRL: Shielded RL with CBF/MPC on Franka-MuJoCo
 
+Ozoglu, N. (2025). SAFIRL: Shielded RL with CBF/MPC on Franka-MuJoCo (v0.1.1) [Software]. Zenodo. https://doi.org/10.5281/zenodo.17273333
+
 > Reproducible training/evaluation for a PPO agent with **Control-Barrier-Function (CBF)** and **MPC-style** shields. Includes STL-like robustness tracing, benchmarks, plotting utilities, and a one-shot reproduction script.
 
 ![CI](https://github.com/nini-n/safirl-codev/actions/workflows/ci.yml/badge.svg)
 ![Release](https://img.shields.io/github/v/release/nini-n/safirl-codev)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.17273333.svg)](https://doi.org/10.5281/zenodo.17273333)
 
 [English](README.md) · [Türkçe](README_TR.md)
 
@@ -122,5 +125,6 @@ If you use this repository in academic work, please cite:
 ## License
 
 MIT License. See [LICENSE](LICENSE).
+
 
 
