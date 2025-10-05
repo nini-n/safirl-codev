@@ -8,7 +8,7 @@ jobs:
   test:
     runs-on: ubuntu-latest
     env:
-      MPLBACKEND: Agg  # matplotlib'ı headless çalıştır
+      MPLBACKEND: Agg
       PIP_DISABLE_PIP_VERSION_CHECK: "1"
 
     steps:
@@ -25,11 +25,13 @@ jobs:
           python -m pip install --upgrade pip
           pip install pytest numpy matplotlib pyyaml
 
-      # İstersen ruff da koşabiliriz; ama önce testleri stabilize edelim.
-      # - name: Lint (ruff)
-      #   run: |
-      #     pip install ruff
-      #     ruff check .
+      - name: Show env (debug)
+        run: |
+          python -V
+          pip -V
+          pytest --version
+          ls -la
+          ls -la tests
 
       - name: Run tests
         run: |
