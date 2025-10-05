@@ -1,160 +1,130 @@
 # scripts/plot_metrics.py
+"""
+Generate training/evaluation figures from CSV logs under runs/.
+
+Outputs:
+  runs/fig_train_return.png
+  runs/fig_train_intervention.png
+  runs/fig_train_robustness.png
+  (optionally) runs/fig_eval_return.png
+  (optionally) runs/fig_eval_intervention.png
+"""
+
+from __future__ import annotations
+
 import csv
 import os
+from typing import List, Dict
 
 import matplotlib.pyplot as plt
-import numpy as np
+
 
 RUNS = "runs"
-os.makedirs(RUNS, exist_ok=True)
+TRAIN_LOG = os.path.join(RUNS, "train_log.csv")
+EVAL_LOG = os.path.join(RUNS, "eval_log.csv")  # optional; create if you have one
 
 
-def load_csv(path):
-    if not os.path.exists(path):
-        return []
-    with open(path, newline="", encoding="utf-8") as f:
-        return list(csv.DictReader(f))
+def _read_csv(path: str) -> List[Dict[str, str]]:
+    rows = []
+    with open(path, "r", newline="", encoding="utf-8") as f:
+        reader = csv.DictReader(f)
+        for r in reader:
+            rows.append(r)
+    return rows
 
 
-def pick_key(row_keys, *candidates):
-    """row_keys: mevcut kolon adları set(), candidates: öncelik sırasıyla isimler"""
-    for c in candidates:
-        if c in row_keys:
-            return c
-    return None
+def _safe_float(x, default=0.0):
+    try:
+        return float(x)
+    except Exception:
+        return default
 
 
-def to_float(arr, key_candidates, default_seq=False):
-    if not arr:
-        return np.array([], dtype=float)
-    row_keys = set(arr[0].keys())
-    key = pick_key(row_keys, *key_candidates)
-    if key is None:
-        if default_seq:
-            # 0..N-1 indeks dizisi döndür (ör. episode yoksa)
-            return np.arange(len(arr), dtype=float)
-        return np.array([], dtype=float)
-    out = []
-    for x in arr:
-        try:
-            out.append(float(x[key]))
-        except Exception:
-            # Bozuk satırları atla
-            continue
-    return np.array(out, dtype=float)
+def plot_train(log_rows: List[Dict[str, str]]):
+    if not log_rows:
+        return
+
+    # Expect headers from train.py writer: t, ep_len, ep_ret, violation, G_dist, G_qdot, F_goal, int_rate, int_avg
+    t = list(range(len(log_rows)))
+    ep_ret = [_safe_float(r.get("ep_ret", "0")) for r in log_rows]
+    int_rate = [_safe_float(r.get("int_rate", "0")) for r in log_rows]
+    G_dist = [_safe_float(r.get("G_dist", "0")) for r in log_rows]
+    G_qdot = [_safe_float(r.get("G_qdot", "0")) for r in log_rows]
+
+    os.makedirs(RUNS, exist_ok=True)
+
+    # Return
+    plt.figure()
+    plt.plot(t, ep_ret)
+    plt.xlabel("Episode")
+    plt.ylabel("Return")
+    plt.title("Training Return")
+    plt.savefig(os.path.join(RUNS, "fig_train_return.png"), dpi=150, bbox_inches="tight")
+    plt.close()
+
+    # Intervention rate
+    plt.figure()
+    plt.plot(t, int_rate)
+    plt.xlabel("Episode")
+    plt.ylabel("Intervention Rate")
+    plt.title("Training Intervention Rate")
+    plt.savefig(os.path.join(RUNS, "fig_train_intervention.png"), dpi=150, bbox_inches="tight")
+    plt.close()
+
+    # Robustness (G_dist / G_qdot)
+    plt.figure()
+    plt.plot(t, G_dist, label="G_dist")
+    plt.plot(t, G_qdot, label="G_qdot")
+    plt.xlabel("Episode")
+    plt.ylabel("Robustness")
+    plt.title("Training Robustness")
+    plt.legend()
+    plt.savefig(os.path.join(RUNS, "fig_train_robustness.png"), dpi=150, bbox_inches="tight")
+    plt.close()
+
+
+def plot_eval(log_rows: List[Dict[str, str]]):
+    if not log_rows:
+        return
+
+    # A generic expectation for eval logs if present:
+    # columns: ep, ret, int_rate, violation, G_dist, G_qdot
+    ep = list(range(len(log_rows)))
+    ret = [_safe_float(r.get("ret", r.get("ep_ret", "0"))) for r in log_rows]
+    int_rate = [_safe_float(r.get("int_rate", "0")) for r in log_rows]
+
+    os.makedirs(RUNS, exist_ok=True)
+
+    plt.figure()
+    plt.plot(ep, ret)
+    plt.xlabel("Episode")
+    plt.ylabel("Return")
+    plt.title("Evaluation Return")
+    plt.savefig(os.path.join(RUNS, "fig_eval_return.png"), dpi=150, bbox_inches="tight")
+    plt.close()
+
+    plt.figure()
+    plt.plot(ep, int_rate)
+    plt.xlabel("Episode")
+    plt.ylabel("Intervention Rate")
+    plt.title("Evaluation Intervention Rate")
+    plt.savefig(os.path.join(RUNS, "fig_eval_intervention.png"), dpi=150, bbox_inches="tight")
+    plt.close()
 
 
 def main():
-    tr_path = os.path.join(RUNS, "train_metrics.csv")
-    ev_path = os.path.join(RUNS, "eval_metrics.csv")
-
-    tr = load_csv(tr_path)
-    ev = load_csv(ev_path)
-
-    if not tr and not ev:
-        print(
-            "Uyarı: Görselleştirecek metrik bulunamadı (train_metrics.csv / eval_metrics.csv yok). Önce eğitim veya değerlendirme çalıştır."
-        )
+    if not os.path.exists(TRAIN_LOG):
+        print("train_log.csv not found. Please run train.py first.")
         return
 
-    # ---- Eğitim grafikleri ----
-    if tr:
-        # X ekseni: episode / ep / iter / satır indeksi
-        ep = to_float(tr, ["episode", "ep", "iter", "epoch"], default_seq=True)
-        ret = to_float(tr, ["ep_ret", "return", "ret"])
-        viol = to_float(tr, ["violation_rate", "viol_rate", "viol"])
-        int_rate = to_float(tr, ["intervention_rate", "int_rate"])
+    train_rows = _read_csv(TRAIN_LOG)
+    plot_train(train_rows)
 
-        # 1) Return
-        if ep.size and ret.size:
-            plt.figure()
-            plt.plot(ep, ret)
-            plt.xlabel("Episode")
-            plt.ylabel("Return")
-            plt.title("Training: Episode Return")
-            plt.grid(True, alpha=0.3)
-            plt.tight_layout()
-            plt.savefig(os.path.join(RUNS, "train_return.png"), dpi=150)
-            plt.close()
+    if os.path.exists(EVAL_LOG):
+        eval_rows = _read_csv(EVAL_LOG)
+        plot_eval(eval_rows)
 
-        # 2) Violation rate
-        if ep.size and viol.size:
-            plt.figure()
-            plt.plot(ep, viol)
-            plt.xlabel("Episode")
-            plt.ylabel("Violation Rate")
-            plt.title("Training: Safety Violations")
-            plt.grid(True, alpha=0.3)
-            plt.tight_layout()
-            plt.savefig(os.path.join(RUNS, "train_violations.png"), dpi=150)
-            plt.close()
-
-        # 3) Intervention rate
-        if ep.size and int_rate.size:
-            plt.figure()
-            plt.plot(ep, int_rate)
-            plt.xlabel("Episode")
-            plt.ylabel("Intervention Rate")
-            plt.title("Training: Shield Interventions")
-            plt.grid(True, alpha=0.3)
-            plt.tight_layout()
-            plt.savefig(os.path.join(RUNS, "train_interventions.png"), dpi=150)
-            plt.close()
-
-    # ---- Değerlendirme grafikleri ----
-    if ev:
-        idx = to_float(ev, ["episode", "ep", "iter"], default_seq=True)
-        mean_ret = to_float(ev, ["mean_return", "mean_ret", "ret"])
-        viol = to_float(ev, ["violations", "viol_rate", "violation_rate"])
-        int_rate = to_float(ev, ["intervention_rate", "int_rate", "mean_int_rate"])
-        g_dist = to_float(ev, ["G_dist"])
-        g_qdot = to_float(ev, ["G_qdot"])
-
-        if idx.size and mean_ret.size:
-            plt.figure()
-            plt.plot(idx, mean_ret)
-            plt.xlabel("Eval Index")
-            plt.ylabel("Mean Return")
-            plt.title("Evaluation: Mean Return")
-            plt.grid(True, alpha=0.3)
-            plt.tight_layout()
-            plt.savefig(os.path.join(RUNS, "eval_mean_return.png"), dpi=150)
-            plt.close()
-
-        if idx.size and int_rate.size:
-            plt.figure()
-            plt.plot(idx, int_rate)
-            plt.xlabel("Eval Index")
-            plt.ylabel("Intervention Rate")
-            plt.title("Evaluation: Shield Interventions")
-            plt.grid(True, alpha=0.3)
-            plt.tight_layout()
-            plt.savefig(os.path.join(RUNS, "eval_interventions.png"), dpi=150)
-            plt.close()
-
-        if idx.size and g_dist.size:
-            plt.figure()
-            plt.plot(idx, g_dist)
-            plt.xlabel("Eval Index")
-            plt.ylabel("G_dist (↑ iyi)")
-            plt.title("Evaluation: STL G_dist")
-            plt.grid(True, alpha=0.3)
-            plt.tight_layout()
-            plt.savefig(os.path.join(RUNS, "eval_G_dist.png"), dpi=150)
-            plt.close()
-
-        if idx.size and g_qdot.size:
-            plt.figure()
-            plt.plot(idx, g_qdot)
-            plt.xlabel("Eval Index")
-            plt.ylabel("G_qdot (↑ iyi)")
-            plt.title("Evaluation: STL G_qdot")
-            plt.grid(True, alpha=0.3)
-            plt.tight_layout()
-            plt.savefig(os.path.join(RUNS, "eval_G_qdot.png"), dpi=150)
-            plt.close()
-
-    print("Grafikler runs/ klasörüne kaydedildi.")
+    print("Figures were saved to the runs/ folder.")
 
 
 if __name__ == "__main__":
