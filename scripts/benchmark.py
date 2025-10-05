@@ -10,7 +10,7 @@ import numpy as np
 import torch as th
 import yaml
 
-# Proje kökünü path'e ekle
+# Add project root to sys.path
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if ROOT not in sys.path:
     sys.path.insert(0, ROOT)
@@ -30,7 +30,7 @@ def make_env(cfg: dict):
             d_min=float(cfg["safety"]["d_min"]),
             qdot_max=float(cfg["safety"]["qdot_max"]),
             episode_len=int(cfg["horizon"]),
-            seed=int(cfg.get("seed", 0)),
+            seed=int(cfg.get("seed, 0").split(",")[0]) if isinstance(cfg.get("seed", 0), str) else int(cfg.get("seed", 0)),
         )
     elif env_name == "franka_kinematic":
         return FrankaKinematicEnv(
@@ -71,16 +71,16 @@ def eval_once(env, agent, shield):
     trunc = False
 
     while not (done or trunc):
-        # Politika eylemi
+        # Policy action
         a, logp, v = agent.select_action(o)
         a_before = a.copy()
 
-        # Shield projeksiyonu
+        # Shield projection
         if shield is not None:
             a = shield.project(o, a)
             if not np.allclose(a, a_before, atol=1e-6):
                 interv_n += 1
-                # Shield sonrası logp'yi yeniden değerlendir
+                # Re-evaluate logp after shielding
                 logp, _, _ = agent.evaluate(o, a)
 
         o2, r, done, trunc, info = env.step(a)
@@ -90,20 +90,18 @@ def eval_once(env, agent, shield):
         tracer.add(info)
         o = o2
 
-    # Bölüm özeti
-    # env tarafında d_min / qdot_max alanları varsa onları, yoksa cfg'den gelenleri kullanırız
+    # Episode summary
+    # If the env exposes d_min / qdot_max use them; otherwise fall back to cfg
     d_min = getattr(env, "d_min", None)
     qdot_max = getattr(env, "qdot_max", None)
     if d_min is None or qdot_max is None:
-        # Güvenli varsayımlar; tracer.summary çağrısı için None kabul etmeyiz
+        # Safe defaults; tracer.summary doesn't accept None
         d_min = 0.08 if d_min is None else d_min
         qdot_max = 0.8 if qdot_max is None else qdot_max
 
     summ = tracer.summary(float(d_min), float(qdot_max))
     int_rate = interv_n / max(1, ep_len)
-    int_avg = (
-        0.0 if interv_n == 0 else 1.0
-    )  # müdahale başına büyüklüğü ayrıca hesaplamıyoruz
+    int_avg = 0.0 if interv_n == 0 else 1.0  # we do not compute per-intervention magnitude here
 
     return {
         "ret": ep_ret,
@@ -153,10 +151,10 @@ def run_benchmark(cfg, policy_path, episodes, variants):
         )
         rows.append([name, episodes, mean_ret, viol_sum, mean_ir, mean_d, mean_q])
 
-    # Kaydet
+    # Save
     os.makedirs("runs", exist_ok=True)
 
-    # per-episode özeti zaten ekranda; summary dosyası:
+    # Aggregate summary file (per-episode summary is already printed)
     with open(os.path.join("runs", "benchmark_summary.csv"), "w", newline="") as f:
         w = csv.writer(f)
         w.writerow(
@@ -173,8 +171,8 @@ def run_benchmark(cfg, policy_path, episodes, variants):
         for r in rows:
             w.writerow(r)
 
-    # Ayrıntı istersen ileride per-episode logunu da ayrı tutabilirsin; burada aggregate yazıyoruz.
-    # Uyum için aynı başlıkları kullanıyoruz.
+    # If you need more detail later, keep per-episode logs separately; we only write aggregates here.
+    # Use the same header names for compatibility.
     with open(os.path.join("runs", "benchmark.csv"), "w", newline="") as f:
         w = csv.writer(f)
         w.writerow(
