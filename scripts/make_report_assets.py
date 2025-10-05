@@ -1,3 +1,4 @@
+# scripts/make_report_assets.py
 import os
 import shutil
 
@@ -22,4 +23,4 @@ for fn in FILES:
     if os.path.exists(src):
         shutil.copy(src, os.path.join(DST, fn))
 
-print("Rapor görselleri runs/report klasöründe toplandı.")
+print("Report figures have been collected under runs/report.")
