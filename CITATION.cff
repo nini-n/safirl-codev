@@ -1,0 +1,27 @@
+cff-version: 1.2.0
+message: >-
+  If you use SAFIRL in your research or teaching, please cite this software.
+title: SAFIRL — Shielded RL for Franka (MuJoCo) with CBF/MPC
+version: 0.1.0
+date-released: 2025-10-05
+authors:
+  - family-names: Nihan
+    given-names: ""
+keywords:
+  - reinforcement-learning
+  - robotics
+  - safety
+  - control-barrier-function
+  - mpc
+  - mujoco
+  - reproducibility
+license: MIT
+repository-code: https://github.com/nini-n/safirl-codev
+preferred-citation:
+  type: software
+  title: SAFIRL — Shielded RL for Franka (MuJoCo) with CBF/MPC
+  authors:
+    - family-names: Nihan
+      given-names: ""
+  year: 2025
+  url: https://github.com/nini-n/safirl-codev
