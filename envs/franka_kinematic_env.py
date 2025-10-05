@@ -1,87 +1,123 @@
-import gymnasium as gym
+# envs/franka_kinematic_env.py
+"""
+Kinematic Franka environment (framework-compatible placeholder).
+
+This is a lightweight, dependency-free version to support quick training/evaluation
+loops in scripts. It keeps the same API as the MuJoCo variant:
+- reset() -> (obs, info)
+- step(a) -> (obs, reward, done, trunc, info)
+
+Observation: 10-dim float32
+Action:      2-dim float32 (planar velocity command)
+"""
+
+from __future__ import annotations
+
+from typing import Tuple, Dict, Any
+
 import numpy as np
-from gymnasium import spaces
 
 
-class FrankaKinematicEnv(gym.Env):
-    """Basit 3-DoF planar kol (Franka benzeri) uç-efektör hedef takibi.
-    Durum: [q1,q2,q3, qd1,qd2,qd3, target_x, target_y, obs_x, obs_y]
-    Aksiyon: eklem hız komutu (rad/s).
-    Güvenlik: engelden d_min kadar uzakta kal.
-    """
+class FrankaKinematicEnv:
+    def __init__(
+        self,
+        episode_len: int = 256,
+        seed: int = 0,
+        d_min: float | None = None,
+        qdot_max: float | None = None,
+    ) -> None:
+        self.episode_len = int(episode_len)
+        self.seed = int(seed)
+        self._rng = np.random.default_rng(self.seed)
 
-    metadata = {"render_modes": []}
+        # Safety parameters are optional here; if provided, keep them for tracers.
+        # If not provided, higher-level scripts may inject defaults.
+        self.d_min = float(d_min) if d_min is not None else None
+        self.qdot_max = float(qdot_max) if qdot_max is not None else None
 
-    def __init__(self, d_min=0.08, qdot_max=1.2, dt=0.02, episode_len=300, seed=0):
-        super().__init__()
-        self.dt = dt
-        self.episode_len = episode_len
-        self.step_count = 0
-        self.d_min = d_min
-        self.qdot_max = qdot_max
-        self.link_lengths = np.array([0.3, 0.25, 0.2])
-        high_q = np.array([np.pi] * 3, dtype=np.float32)
-        high_dq = np.array([qdot_max] * 3, dtype=np.float32)
-        high = np.concatenate([high_q, high_dq, [2.0, 2.0, 2.0, 2.0]]).astype(
-            np.float32
-        )
-        self.observation_space = spaces.Box(-high, high, dtype=np.float32)
-        self.action_space = spaces.Box(
-            low=-qdot_max, high=qdot_max, shape=(3,), dtype=np.float32
-        )
-        self.rng = np.random.default_rng(seed)
-        self.reset(seed=seed)
+        # Simple planar point-mass with velocity control
+        self._obs_dim = 10
+        self._act_dim = 2
 
-    def fk(self, q):
-        l1, l2, l3 = self.link_lengths
-        x1 = l1 * np.cos(q[0])
-        y1 = l1 * np.sin(q[0])
-        x2 = x1 + l2 * np.cos(q[0] + q[1])
-        y2 = y1 + l2 * np.sin(q[0] + q[1])
-        xe = x2 + l3 * np.cos(q.sum())
-        ye = y2 + l3 * np.sin(q.sum())
-        return np.array([xe, ye], dtype=np.float32)
+        # Export Gym-like spaces (shape only)
+        self.observation_space = type("Box", (), {"shape": (self._obs_dim,)})
+        self.action_space = type("Box", (), {"shape": (self._act_dim,)})
 
-    def distance_to_obstacle(self, p):
-        obs = self.obs
-        return np.linalg.norm(p - obs) - 0.05  # obstacle radius = 5 cm
+        # State: position/velocity (x, y) + goal (xg, yg)
+        self._p = np.zeros(2, dtype=np.float32)
+        self._v = np.zeros(2, dtype=np.float32)
+        self._goal = np.array([0.5, 0.0], dtype=np.float32)
 
-    def _get_obs(self):
-        return np.concatenate([self.q, self.qd, self.goal, self.obs]).astype(np.float32)
+        self._t = 0
 
-    def reset(self, seed=None, options=None):
-        if seed is not None:
-            self.rng = np.random.default_rng(seed)
-        self.q = self.rng.uniform(low=-0.5, high=0.5, size=(3,)).astype(np.float32)
-        self.qd = np.zeros(3, dtype=np.float32)
-        self.goal = self.rng.uniform(low=[0.2, -0.3], high=[0.6, 0.6]).astype(
-            np.float32
-        )
-        self.obs = self.rng.uniform(low=[0.1, -0.2], high=[0.5, 0.5]).astype(np.float32)
-        self.step_count = 0
-        return self._get_obs(), {}
+    # ----------------------------
+    # Gym-like API
+    # ----------------------------
+    def reset(self) -> Tuple[np.ndarray, Dict[str, Any]]:
+        self._t = 0
+        self._p[:] = self._rng.normal(0.0, 0.05, size=2)
+        self._v[:] = 0.0
+        self._goal[:] = self._rng.uniform(-0.6, 0.6, size=2)
+        obs = self._make_obs()
+        info = {"reset": True}
+        return obs, info
 
-    def step(self, action):
-        action = np.clip(action, -self.qdot_max, self.qdot_max)
-        self.qd = action
-        self.q = self.q + self.qd * self.dt
-        ee = self.fk(self.q)
-        dist_goal = np.linalg.norm(ee - self.goal)
-        dist_obs = self.distance_to_obstacle(ee)
-        # reward: goal yakınlık - kontrol cezası; güvenlik ihlali cezası
-        reward = -dist_goal - 0.01 * np.square(action).sum()
-        safe = dist_obs - self.d_min
-        if safe < 0:
-            reward -= 5.0 + 10.0 * (-safe)
+    def step(self, a: np.ndarray):
+        a = np.asarray(a, dtype=np.float32)
 
-        self.step_count += 1
-        terminated = dist_goal < 0.03
-        truncated = self.step_count >= self.episode_len
+        # If qdot_max is defined, clip the action magnitude.
+        if self.qdot_max is not None:
+            a = np.clip(a, -self.qdot_max, self.qdot_max)
+
+        # Integrate planar dynamics
+        dt = 0.05
+        self._v = 0.9 * self._v + 0.1 * a
+        self._p = self._p + self._v * dt
+
+        # Reward: negative distance to goal minus velocity penalty
+        dist = float(np.linalg.norm(self._p - self._goal))
+        reward = -dist - 0.01 * float(np.linalg.norm(a))
+
+        # A toy obstacle at (0.0, 0.0); consider proximity as a safety proxy
+        d_proxy = float(np.linalg.norm(self._p - np.array([0.0, 0.0], dtype=np.float32)))
+        violation = False
+        if self.d_min is not None:
+            violation = d_proxy < self.d_min
+
+        self._t += 1
+        done = False
+        trunc = self._t >= self.episode_len
+
+        obs = self._make_obs()
+
+        # Forward robustness hints for tracers (tolerant to None)
+        G_dist = 0.0
+        if self.d_min is not None:
+            G_dist = max(0.0, self.d_min - d_proxy)
+        G_qdot = 0.0
+        if self.qdot_max is not None:
+            G_qdot = max(0.0, float(np.max(np.abs(a))) - self.qdot_max)
+
         info = {
-            "ee": ee.copy(),
-            "goal": self.goal.copy(),  # <-- EKLENDİ
-            "dist_goal": float(dist_goal),
-            "dist_obs": float(dist_obs),
-            "safe_margin": float(safe),
+            "G_dist": float(G_dist),
+            "G_qdot": float(G_qdot),
+            "F_goal": -dist,
+            "violation": bool(violation),
         }
-        return self._get_obs(), reward, terminated, truncated, info
+        return obs, float(reward), bool(done), bool(trunc), info
+
+    # ----------------------------
+    # Helpers
+    # ----------------------------
+    def _make_obs(self) -> np.ndarray:
+        # [p(2), v(2), goal(2), delta(2), speed, bias] → 10 dims
+        delta = self._goal - self._p
+        speed = float(np.linalg.norm(self._v))
+        obs = np.zeros(self._obs_dim, dtype=np.float32)
+        obs[0:2] = self._p
+        obs[2:4] = self._v
+        obs[4:6] = self._goal
+        obs[6:8] = delta
+        obs[8] = speed
+        obs[9] = 1.0  # bias term
+        return obs
