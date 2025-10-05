@@ -1,3 +1,5 @@
+# NOTE: floating-point equality -> use math.isclose for robustness.
+
 import math
 from specs.specs import (
     RobustnessTerms,
