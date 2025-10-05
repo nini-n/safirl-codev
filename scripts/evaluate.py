@@ -21,39 +21,6 @@ from shield.mpc_shield import MPCShield
 from verify.robustness import EpisodeTracer
 
 
-def _append_eval_csv(row: dict, csv_path: str = "runs/eval_metrics.csv"):
-    os.makedirs(os.path.dirname(csv_path), exist_ok=True)
-    header = [
-        "episode",
-        "return",
-        "violation",
-        "mean_int_rate",
-        "G_dist",
-        "G_qdot",
-        "F_goal",
-    ]
-    file_exists = os.path.isfile(csv_path)
-    with open(csv_path, "a", newline="") as f:
-        w = csv.DictWriter(f, fieldnames=header)
-        if not file_exists:
-            w.writeheader()
-        # eksik anahtar varsa güvenli doldurma
-        safe = {k: row.get(k, "") for k in header}
-        w.writerow(safe)
-
-
-row = {
-    "episode": ep_idx,  # sen ep index'i nasıl tutuyorsan onu kullan
-    "return": ret,
-    "violation": bool(violation),
-    "mean_int_rate": float(int_rate),  # sende int_rate/int_avg varsa kullan
-    "G_dist": float(rob.get("G_dist", "")),
-    "G_qdot": float(rob.get("G_qdot", "")),
-    "F_goal": float(rob.get("F_goal", "")),
-}
-_append_eval_csv(row)
-
-
 def make_env(cfg: dict):
     env_name = str(cfg["env"])
     if env_name == "franka_mujoco":
@@ -125,7 +92,7 @@ def main():
         done = False
         trunc = False
         while not (done or trunc):
-            # politika
+            # policy
             a, logp, v = agent.select_action(o)
             a_before = a.copy()
 
@@ -145,21 +112,19 @@ def main():
 
             o = o2
 
-        # özet
+        # summary
         summ = tracer.summary(
             float(cfg["safety"]["d_min"]), float(cfg["safety"]["qdot_max"])
         )
         int_rate = interv_n / max(1, ep_len)
-        int_avg = (
-            0.0 if interv_n == 0 else 1.0
-        )  # burada müdahale başına büyüklük tutmuyoruz
+        int_avg = 0.0 if interv_n == 0 else 1.0  # we do not track per-intervention magnitude here
 
         print(
             f"[{ep + 1}] ret={ep_ret:.2f}  violation={summ['violation']}  rob={summ['robustness']}  "
             f"int_rate={int_rate:.3f}  int_avg={int_avg:.4f}"
         )
 
-        # sonraki bölüm
+        # next episode
         reset_out = env.reset()
         o = reset_out[0] if isinstance(reset_out, tuple) else reset_out
 
