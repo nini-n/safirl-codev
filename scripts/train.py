@@ -1,10 +1,10 @@
 # scripts/train.py
 """
-PPO eğitim döngüsü (Seçenek B):
-- Aksiyon, logp, value -> agent.select_action()
-- Shield uygularsak logp'yi agent.evaluate() ile yeniden hesapla
-- Buffer'a (obs, act, rew, val, logp) sırayla yaz
-- Epizot sonunda GAE(λ) için last_val: timeout'ta bootstrap, aksi halde 0
+PPO training loop (Option B):
+- Action, logp, value -> agent.select_action()
+- If a shield is used, recompute logp via agent.evaluate() after projection
+- Write (obs, act, rew, val, logp) to the buffer in order
+- For GAE(λ) at episode end: bootstrap last_val on timeout; otherwise 0
 """
 
 from __future__ import annotations
@@ -18,7 +18,7 @@ import time
 import numpy as np
 import yaml
 
-# ---- Proje kökünü sys.path'e ekle (importlar için güvenli) ----
+# ---- Add project root to sys.path (safe for imports) ----
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if ROOT not in sys.path:
     sys.path.insert(0, ROOT)
@@ -34,7 +34,7 @@ from verify.robustness import EpisodeTracer  # noqa: E402
 
 
 # ---------------------------
-# Env & Shield factory
+# Env & Shield factories
 # ---------------------------
 def make_env(cfg: dict):
     env_name = str(cfg["env"])
@@ -86,7 +86,7 @@ def main():
     with open(args.cfg, encoding="utf-8") as f:
         cfg = yaml.safe_load(f)
 
-    # hyperparams
+    # hyperparameters
     horizon = int(cfg["horizon"])
     hidden_sizes = tuple(cfg["hidden_sizes"])
     lr = float(cfg["learning_rate"])
@@ -109,7 +109,7 @@ def main():
     total_steps = int(args.steps)
     start_time = time.time()
 
-    # reset obs (gymnasium/gym uyumu)
+    # reset obs (gymnasium/gym compatibility)
     reset_out = env.reset()
     o = reset_out[0] if isinstance(reset_out, tuple) else reset_out
 
@@ -135,39 +135,39 @@ def main():
             )
 
     for t in range(total_steps):
-        # 1) Policy'den aksiyon, logp, value al
+        # 1) Get action, logp, value from the policy
         a, logp, v = agent.select_action(o)
         a_before = a.copy()
 
-        # 2) Shield projeksiyonu
+        # 2) Shield projection
         if shield is not None:
             a = shield.project(o, a)
-            # shield aksiyonu değiştirdiyse logp'yi yeni aksiyona göre güncelle
+            # If the shield changed the action, recompute logp for the new action
             if not np.allclose(a, a_before, atol=1e-6):
                 interv_n += 1
                 logp, _, _ = agent.evaluate(o, a)
 
-        # 3) Çevre adımı
+        # 3) Environment step
         o2, r, done, trunc, info = env.step(a)
         ep_ret += float(r)
         ep_len += 1
 
-        # 4) Buffer'a kaydet (obs, act, rew, val, logp)
+        # 4) Store to buffer (obs, act, rew, val, logp)
         buf.store(o, a, r, v, logp)
 
-        # 5) İzleyici (robustness hesapları için)
+        # 5) Tracer (for robustness computation)
         tracer.add(info)
 
-        # 6) Sonraki gözlem
+        # 6) Next observation
         o = o2
 
-        # 7) Epizot sonu?
+        # 7) Episode end?
         timeout = ep_len == horizon
         terminal = bool(done) or bool(trunc) or timeout
         if terminal:
-            # timeout'ta bootstrap, diğer sonlarda 0
+            # Bootstrap on timeout; otherwise zero
             if timeout:
-                # value sadece gözleme bağlı; eylem önemsenmiyor
+                # Value depends only on observation; action is irrelevant
                 zero_act = np.zeros(act_dim, dtype=np.float32)
                 last_val = agent.evaluate(o, zero_act)[2]
             else:
@@ -175,7 +175,7 @@ def main():
 
             buf.finish_path(last_val, gamma=gamma, lam=gae_lambda)
 
-            # Robustness özeti + basit log
+            # Robustness summary + lightweight log
             summ = tracer.summary(
                 float(cfg["safety"]["d_min"]), float(cfg["safety"]["qdot_max"])
             )
@@ -206,13 +206,13 @@ def main():
                 f"int_rate={int_rate:.3f}  int_avg={int_avg:.4f}"
             )
 
-            # reset episode sayaçları
+            # Reset episode counters
             reset_out = env.reset()
             o = reset_out[0] if isinstance(reset_out, tuple) else reset_out
             ep_ret, ep_len, interv_n = 0.0, 0, 0
             tracer.clear()
 
-        # 8) Her horizon sonunda PPO güncellemesi
+        # 8) PPO update at every horizon
         if (t + 1) % horizon == 0:
             ppo_update(
                 agent,
@@ -222,7 +222,7 @@ def main():
                 minibatch_size=minibatch_size,
             )
 
-    # Eğitim bitti: policy kaydet
+    # Training finished: save policy
     th.save(agent.state_dict(), "runs/latest.pt")
     print("Saved policy to runs/latest.pt")
     print(f"Total time: {time.time() - start_time:.1f}s")
