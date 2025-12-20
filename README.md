@@ -1,14 +1,23 @@
-# SAFIRL: Shielded RL with CBF/MPC on Franka-MuJoCo
+# SAFIRL: Shielded RL with CBF/MPC on Franka–MuJoCo
 
-Ozoglu, N. (2025). SAFIRL: Shielded RL with CBF/MPC on Franka-MuJoCo (v0.1.1) [Software]. Zenodo. https://doi.org/10.5281/zenodo.17273333
-
-> Reproducible training/evaluation for a PPO agent with **Control-Barrier-Function (CBF)** and **MPC-style** shields. Includes STL-like robustness tracing, benchmarks, plotting utilities, and a one-shot reproduction script.
-
-![CI](https://github.com/nini-n/safirl-codev/actions/workflows/ci.yml/badge.svg)
-![Release](https://img.shields.io/github/v/release/nini-n/safirl-codev)
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.17273333.svg)](https://doi.org/10.5281/zenodo.17273333)
+[![ORCID](https://img.shields.io/badge/ORCID-0009--0001--2270--5496-A6CE39?logo=orcid&logoColor=white)](https://orcid.org/0009-0001-2270-5496)
+[![CI](<CI_BADGE_URL>)](<CI_WORKFLOW_URL>)
 
+Reproducible training/evaluation for safe robotic manipulation in MuJoCo (Franka), combining PPO with CBF/MPC-style safety shields.
+
+**Key features**
+- Shielded RL: CBF and MPC safety filters for action correction
+- STL-like safety/robustness tracing and benchmark comparisons
+- One-command reproducibility (Docker/CI) with scripts and configs
+
+**Docs**
+- English | Türkçe
 [English](README.md) · [Türkçe](README_TR.md)
+
+## Cite this software
+Oozglu, N. (2025). *SAFIRL: Shielded RL with CBF/MPC on Franka–MuJoCo (v0.1.1)* [Software]. Zenodo. https://doi.org/10.5281/zenodo.17273333
+
 
 ---
 
@@ -125,6 +134,7 @@ If you use this repository in academic work, please cite:
 ## License
 
 MIT License. See [LICENSE](LICENSE).
+
 
 
 
