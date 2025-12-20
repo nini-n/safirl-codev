@@ -3,7 +3,8 @@
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.17273333.svg)](https://doi.org/10.5281/zenodo.17273333)
 [![ORCID](https://img.shields.io/badge/ORCID-0009--0001--2270--5496-A6CE39?logo=orcid&logoColor=white)](https://orcid.org/0009-0001-2270-5496)
 [![CI](<CI_BADGE_URL>)](<CI_WORKFLOW_URL>)
-[![OSF](https://img.shields.io/badge/OSF-8nge-2E6DA4?logo=osf&logoColor=white)](https://osf.io/8nge/)
+
+- OSF: https://osf.io/8nge/
 
 Reproducible training/evaluation for safe robotic manipulation in MuJoCo (Franka), combining PPO with CBF/MPC-style safety shields.
 
@@ -135,6 +136,7 @@ If you use this repository in academic work, please cite:
 ## License
 
 MIT License. See [LICENSE](LICENSE).
+
 
 
 
