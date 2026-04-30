@@ -1,4 +1,4 @@
-# SAFIRL: Shielded RL with CBF/MPC on Franka–MuJoCo
+# SAFIRL: Shielded RL with CBF/MPC on Franka-MuJoCo
 
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.17273333.svg)](https://doi.org/10.5281/zenodo.17273333)
 [![ORCID](https://img.shields.io/badge/ORCID-0009--0001--2270--5496-A6CE39?logo=orcid&logoColor=white)](https://orcid.org/0009-0001-2270-5496)
